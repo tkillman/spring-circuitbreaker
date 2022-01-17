@@ -317,4 +317,43 @@ public class CircuitBreakerTest extends AbstractCircuitBreakerTest{
 ```
 # [Step80] 부가적인 UI 설정
 
+1. /actuator 활용   
+circuit breaker가 오픈되었음을 확인
+> http://localhost:8282/actuator/health   
+> 
+> 특정 권한자만 /actuator 접근 허용 설정(EndpointRequest.toAnyEndpoint())    
+> https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html#actuator.endpoints.security
+
+2. prometheus 와 grafana 연동   
+> 매번 포스트맨 설정을 통해 확인할 수 없으니 해당 actuator 를 prometheus 와 grafana 연동을 통해 ui 적으로 확인 가능
+> 
+> build.gradle 추가
+> > implementation 'io.micrometer:micrometer-registry-prometheus'
+> 
+> docker 구성  
+> > docker-compose -f docker-compose-desktop.yml up
+>
+> prometheus 확인   
+> > http://localhost:9090/  
+> > Status > Targets 메뉴 에서 app과 actuator status가 up인지 확인
+> > ![prometheus](./doc/prometheus.PNG)
+> > ![status_up](./doc/status_up.PNG)
+> 
+> 
+> grafana 확인   
+> > http://localhost:3000/   
+> > id :admin , password : admin
+> >
+> >
+> > '+' 메뉴에 import 클릭 후 upload json에 ./docker/dashboard.json 추가
+> > ![grafana](./doc/grafana.png)   
+> 
+> > 톱니바퀴 메뉴에 Datasource 클릭 후 Add data source 버튼 클릭 > Prometheus 추가   
+> > url :: http://본인 아이피 :9090 입력 (예 : http://192.168.0.28:9090 )
+> >![prometheus_rul](./doc/prometheus_url.PNG)
+> >
+> > ui 확인
+> ![success_ui](./doc/success_ui.PNG)
+
+
 

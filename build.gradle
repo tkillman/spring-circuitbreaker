@@ -34,11 +34,16 @@ dependencies {
 	// actuator 를 통해 서비스의 상태 확인 가능 /actuator url을 통해 확인 가능
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
+	// circuit-breaker ui 확인
+	implementation 'io.micrometer:micrometer-registry-prometheus'
+
 	// lombock
 	compileOnly 'org.projectlombok:lombok:1.18.22'
 	annotationProcessor 'org.projectlombok:lombok:1.18.22'
 	testCompileOnly 'org.projectlombok:lombok:1.18.22'
 	testAnnotationProcessor 'org.projectlombok:lombok:1.18.22'
+
+
 }
 
 test {
