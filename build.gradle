@@ -18,7 +18,10 @@ dependencies {
 	// TEST
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
-	// resilience 핵심 모듈(CircuitBreaker, Bulkhead, RateLimiter, Retry, TimeLimiter), 부분적으로 implementation 가능
+	// spring-boot 에서 resilience4j 사용 가능하게 해 줌
+	implementation 'io.github.resilience4j:resilience4j-spring-boot2:1.7.1'
+	
+	// resilience 핵심 모듈 (CircuitBreaker, Bulkhead, RateLimiter, Retry, TimeLimiter), 부분적으로 implementation 가능
 	implementation 'io.github.resilience4j:resilience4j-all:1.7.1'
 
 	// annotation 으로 circuit-breaker 의 옵션 설정가능
