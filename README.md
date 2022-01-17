@@ -17,11 +17,24 @@ https://resilience4j.readme.io/docs
 > 
 > 공식 예제 git   
 > https://github.com/resilience4j/resilience4j-spring-boot2-demo
+>
+> blog   
+> https://happycloud-lee.tistory.com/219
 
 ### [Step10] circuit breaker 란?
 ![circuit_braker](./doc/circuit_2.png)
 
->회로차단기 형태로 장애가 전파되는 현상을 막는 기능을 한다.
+>회로차단기 형태로 장애가 전파되는 현상을 막는 기능을 한다.   
+> 
+> 핵심모듈   
+> * CircuitBreaker  4순위
+> * Bulkhead (Thread별 설정) 1순위
+> * RateLimiter (시간 당 실행횟수) 3순위 
+> * Retry (재시도 횟수) 5순위
+> * TimeLimiter (시간제어) 2순위
+> 
+> 핵심모듈 적용 순서
+> Retry ( CircuitBreaker ( RateLimiter ( TimeLimiter ( Bulkhead ( Function ) ) ) ) )
 
 ### [Step20] Why resilience4j?
 >https://resilience4j.readme.io/docs/comparison-to-netflix-hystrix   
@@ -113,7 +126,7 @@ public class BackendAController {
 > 
 > ![failure](./doc/success_test.PNG)
 > 
-> http://localhost:8282/backendA/success 요청
+> http://localhost:8282/backendA/success 요청   
 ![success](./doc/failure_test.PNG)
 > 
 > **6.circuit-breaker 옵션설정**
@@ -142,6 +155,166 @@ resilience4j.circuitbreaker.instances.backendA.baseConfig=default
 > 
 > resilience4j.circuitbreaker.configs.default.registerHealthIndicator=true   
 > > actuator 에 circuitbreakr의 endPoint를 제공하겠다는 설정
+> 
+![actuator_postman](./doc/acturator_postman.PNG)
 
 # [Step50] circuitBreaker 확인해보기
+http://localhost:8282/actuator/circuitbreakers 로 내가 설정한 circuitbreakers 가 등록되어 있는지 확인 가능
+
+# [step60] circuitbreaker의 옵션 살펴보기
+
+옵션을 설정하는 방법 두가지
+>
+> * properties 파일 이용
+> https://resilience4j.readme.io/docs/getting-started-3
+>
+>* java source 이용 
+> https://resilience4j.readme.io/docs/examples
+
+옵션 공식문서 (메뉴 : CircuitBreaker )   
+https://resilience4j.readme.io/docs/circuitbreaker 
+
+기본적인 설정
+> slidingWindowType : COUNT_BASED (default 건수), TIME_BASED(시간)   
+> slidingWindowSize : 통계건수   
+> minimumNumberOfCalls : 최소요청횟수    
+> failureRateThreshold : 실패율
+> waitDurationInOpenState : Circuit Breaker유지시간   
+> recordExceptions : circuit-breaker 에서 모니터링 할 Exception 설정 (설정하지 않으면 모든 Exception)
+>  
+옵션에 적용해보기
+
+```
+
+resilience4j.circuitbreaker.instances.backendA.slidingWindowSize=10
+resilience4j.circuitbreaker.instances.backendA.minimumNumberOfCalls=2
+resilience4j.circuitbreaker.instances.backendA.failureRateThreshold=60
+resilience4j.circuitbreaker.instances.backendA.waitDurationInOpenState=10000
+
+# if recordExceptions is not setted all Exception
+#resilience4j.circuitbreaker.instances.backendA.recordExceptions[0]=org.springframework.web.client.HttpServerErrorException
+#resilience4j.circuitbreaker.instances.backendA.recordExceptions[1]=java.io.IOException
+
+```
+
+![circuit_options](./doc/circuit_opitions.PNG)
+
+위의 옵션설정대로라면 2회 이후에 최근 10건의 요청중 실패율이 60% 이상이면 Circuit Breaker가 오픈된다.
+
+# [Step70] 테스트코드 작성을 통한 해당 옵션 확인해보기
+
+SpringCircuitbreakerApplicationTests.java 
+```java
+package com.example.springcircuitbreaker;
+
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+
+@ExtendWith(SpringExtension.class)
+@AutoConfigureWebTestClient
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+		classes = SpringCircuitbreakerApplication.class)
+abstract class SpringCircuitbreakerApplicationTests {
+
+	protected static final String BACKEND_A = "backendA";
+
+	@Autowired
+	protected CircuitBreakerRegistry circuitBreakerRegistry;
+
+	@Autowired
+	protected TestRestTemplate restTemplate;
+
+	@BeforeEach
+	public void setup() {
+		// 초기 실행 시 circuit-breaker를 close 상태로 만든다.
+		transitionToClosedState(BACKEND_A);
+	}
+
+	protected void transitionToOpenState(String circuitBreakerName) {
+		CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(circuitBreakerName);
+		circuitBreaker.transitionToOpenState();
+	}
+
+	protected void transitionToClosedState(String circuitBreakerName) {
+		CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(circuitBreakerName);
+		circuitBreaker.transitionToClosedState();
+	}
+}
+```
+
+AbstractCircuitBreakerTest.java
+
+```java
+package com.example.springcircuitbreaker;
+
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+public abstract class AbstractCircuitBreakerTest extends SpringCircuitbreakerApplicationTests{
+
+    protected void checkHealthStatus(String circuitBreakerName, CircuitBreaker.State state) {
+        CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(circuitBreakerName);
+        assertThat(circuitBreaker.getState()).isEqualTo(state);
+    }
+}
+```
+
+CircuitBreakerTest.java
+
+```java
+package com.example.springcircuitbreaker;
+
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.vavr.collection.Stream;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@Slf4j
+public class CircuitBreakerTest extends AbstractCircuitBreakerTest{
+
+    @Test
+    public void shouldOpenBackendACircuitBreaker() {
+
+        // 실패, 실패율 : 100%, 수행횟수 : 1번
+        produceFailure(BACKEND_A);
+
+        // minimumNumberOfCalls 2로 설정되어 있어 최소 2번은 수행해야 통계를 작성하므로 실패율이 100%이더라도 circuit-breaker 가 오픈되지 않음.
+        checkHealthStatus(BACKEND_A, CircuitBreaker.State.CLOSED);
+
+        // 성공, 실패율 : 50%, 수행횟수 : 2번
+        produceSuccess(BACKEND_A);
+
+        checkHealthStatus(BACKEND_A, CircuitBreaker.State.CLOSED);
+
+        // 실패, 실패율 : 100 * 2/3 = 66%, 수행횟수 3번
+        produceFailure(BACKEND_A);
+
+        checkHealthStatus(BACKEND_A, CircuitBreaker.State.OPEN);
+    }
+
+    private void produceFailure(String backend) {
+        ResponseEntity<String> response = restTemplate.getForEntity("/" + backend + "/failure", String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private void produceSuccess(String backend) {
+        ResponseEntity<String> response = restTemplate.getForEntity("/" + backend + "/success", String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+}
+```
+# [Step80] 부가적인 UI 설정
+
 

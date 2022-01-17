@@ -15,6 +15,7 @@ repositories {
 dependencies {
 	// 기본 웹 기능
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+
 	// TEST
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
@@ -28,10 +29,16 @@ dependencies {
 	implementation 'io.github.resilience4j:resilience4j-annotations:1.7.1'
 
 	// resilience4j 의 annotation 을 spring aop 로 실행 가능하게 해줌. 이 설정이 없으면 동작하지 않음
-	implementation 'org.springframework:spring-aop:5.3.15'
+	implementation 'org.springframework.boot:spring-boot-starter-aop'
 
 	// actuator 를 통해 서비스의 상태 확인 가능 /actuator url을 통해 확인 가능
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+	// lombock
+	compileOnly 'org.projectlombok:lombok:1.18.22'
+	annotationProcessor 'org.projectlombok:lombok:1.18.22'
+	testCompileOnly 'org.projectlombok:lombok:1.18.22'
+	testAnnotationProcessor 'org.projectlombok:lombok:1.18.22'
 }
 
 test {
