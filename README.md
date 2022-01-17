@@ -128,11 +128,9 @@ public class BackendAController {
 > 
 > http://localhost:8282/backendA/success 요청   
 ![success](./doc/failure_test.PNG)
+>
+>6.actuator 확인하기   
 > 
-> **6.circuit-breaker 옵션설정**
-> 
-> 
->7.actuator 확인하기   
 > build.gradle 에 actuator 추가 시 자동적으로 /actuator url을 제공해준다.
 > > implementation 'org.springframework.boot:spring-boot-starter-actuator'
 ![actuator_log](./doc/actuator_log.PNG)
